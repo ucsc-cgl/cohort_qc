@@ -6,6 +6,7 @@ library(tcltk)
 library(asbio)
 library(nortest)
 library(data.table)
+#Calculates the Confidence Intervals
 Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE){
   colnames(Merge_File)<-c("point","value","Name")
   Bad_data=NULL
@@ -18,6 +19,8 @@ Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE
   Upper_List=NULL
   Lower_List=NULL
   Con_Interval_Table=NULL
+  # For loop that loops through all the quality scores x being th quality score.
+  # The for loop Subsets all the quality scores, takes the confidence interval using ci.median and then stores it.
   for (x in x_value){
     Quality_Subset=subset(Merge_File,Merge_File$point==x)
     Con_Int=ci.median(Quality_Subset$value,.975)
@@ -35,7 +38,7 @@ Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE
     Lower_List=rbind(Lower_List,Lower)
     Upper_List=rbind(Upper_List,Upper)
     for (i in nrow(Quality_Subset)){
-      if (Quality_Subset$value[i] <= Lower$value[1] | Quality_Subset$value[i] >= Upper$value[1]){
+      if (Quality_Subset$value[i] <= Lower$value[1] || Quality_Subset$value[i] >= Upper$value[1]){
         Subset_by_name=subset(Merge_File,Merge_File$Name==Quality_Subset$Name[i])
         Merge_File=Merge_File[Merge_File$Name != Quality_Subset$Name[i],]
         Subset_by_name=data.frame(Subset_by_name)
@@ -47,7 +50,6 @@ Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE
   #Bad_data$value <- as.numeric(Bad_data$value)
   return(Data)
 }
-
 
 # Checking if its higher that 35
 Verifying_Intervals <- function(Bad_samples,npar=TRUE){
@@ -91,13 +93,12 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
     Index_Trues=which(TF_List %in% TRUE)
     for ( i in 1:(length(Index_Trues)-1)){
       if (Index_Trues[i+1]-Index_Trues[i]-1>1){
-      Straight=matrix(c(Index_Trues[i]+1,Index_Trues[i+1]-1,Index_Trues[i+1]-Index_Trues[i]-1),byrow = TRUE,ncol = 3)
-      Straight=data.frame(Straight)
-      Straightlines=rbind(Straightlines,Straight)
+        Straight=matrix(c(Index_Trues[i]+1,Index_Trues[i+1]-1,Index_Trues[i+1]-Index_Trues[i]-1),byrow = TRUE,ncol = 3)
+        Straight=data.frame(Straight)
+        Straightlines=rbind(Straightlines,Straight)
       }
     }
-    print(Straightlines)
-    if (!is.na(Straightlines)){
+    if (!is.null(Straightlines)){
       Straightlines=data.frame(Straightlines)
       bool=TRUE
       while(bool){
@@ -105,29 +106,67 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
         colnames(Longest_line)<-c("L","H","D")
         Verify_Mean=Subset_Name[Subset_Name$Base>=Longest_line$L[1] & Subset_Name$Base<=Longest_line$H[1],]
         Verify_Mean=na.omit(Verify_Mean)
-        print(Verify_Mean)
         rownames(Verify_Mean)<-c(1:nrow(Verify_Mean))
         Verify_Mean=data.frame(Verify_Mean)
         MeanAT=mean(Verify_Mean$A)
         MeanGC=mean(Verify_Mean$G)
-        print(Verify_Mean)
         for (i in 1:nrow(Verify_Mean)){
-          if (MeanAT+2<=Verify_Mean$A[i] | MeanAT-2>=Verify_Mean$A[i] | MeanAT+2<=Verify_Mean$T[i] | MeanAT-2>=Verify_Mean$T[i] | 
-              MeanGC+2<=Verify_Mean$G[i] | MeanGC-2>=Verify_Mean$G[i] | MeanGC+2<=Verify_Mean$C[i] | MeanGC-2>=Verify_Mean$C[i]){
+          if (MeanAT+2>=Verify_Mean$A[i] | MeanAT-2<=Verify_Mean$A[i] | MeanAT+2>=Verify_Mean$T[i] | MeanAT-2<=Verify_Mean$T[i] | 
+              MeanGC+2>=Verify_Mean$G[i] | MeanGC-2<=Verify_Mean$G[i] | MeanGC+2>=Verify_Mean$C[i] | MeanGC-2<=Verify_Mean$C[i]){
             bool=TRUE
             break
           }
           else
             bool=FALSE
         }
-        if (bool)
+        if (bool){
           Longest_Lines=rbind(Longest_Lines,Verify_Mean)
+          bool=FALSE
+        }
       }
+    }
+    else{
+      NA_Data=c(NA,NA,NA,NA,NA,Subset_Name$Name[i],NA,NA,NA)
+      Longest_Lines=rbind(Longest_Lines,NA_Data)
     }
   }
   return(Longest_Lines)
 }
-Good_data=Finding_Continuous_Line(PBSC_Subset,Name_of_files)
+# Spliting into 50 per set
+Splitting_data <- function (Good_data,Name_of_files,npar=TRUE){
+  len = length(Name_of_files)
+  rest=len %% 10
+  value = len-rest
+  Datalist=NULL
+  value_50=value/50
+  Data_sep_50=NULL
+  t=1
+  for (i in (1:(t*50))){
+    name=Name_of_files[i]
+    Data_subset=subset(Good_data,Good_data$Name==name)
+    Data_sep_50=rbind(Data_sep_50,Data_subset)
+  }
+  Datalist[[t]]=Data_sep_50
+  Data_sep_50=NULL
+  t=t+1
+  while(t!=value_50){
+    for (i in ((t*50+1):(t*50+50))){
+      name=Name_of_files[i]
+      Data_subset=subset(Good_data,Good_data$Name==name)
+      Data_sep_50=rbind(Data_sep_50,Data_subset)
+    }
+    Datalist[[t]]=Data_sep_50
+    Data_sep_50=NULL
+    t=t+1
+  }
+  for (i in ((t*50+1):(t*50+rest))){
+    name=Name_of_files[i]
+    Data_subset=subset(Good_data,Good_data$Name==name)
+    Data_sep_50=rbind(Data_sep_50,Data_subset)
+  }
+  Datalist[[t]]=Data_sep_50
+  return(Datalist)
+}
 #Normality test for Per Sequence GC Content
 Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
   colnames(Merge_File)<-c("point","value","Name")
@@ -141,11 +180,58 @@ Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
     print(Shapiro)
     if (Shapiro<.05){
       Bad_data=rbind(Bad_data,Data_Subset)
-      }
     }
+  }
   #Bad_data$value <- as.numeric(Bad_data$value)
   return(Bad_data)
 }
+
+
+
+# function to extract read pair id from fastq file name or tar or fastqc result
+
+miserableTestData=c("140618_I1069_FCC4MWGACXX_L4_LSCRHmM121ACAAAPEI-3_1.clean_fastqc", "AH07020812_ACACGA_L002_R1_002.fastq", "E021_0001_20140916_tumor_RNASeq_R1.clean.tar","C021_0001_20140916_tumor_RNASeq.tar", "LS3_GGCTAC_L002_R2_002.fq.gz", "AM163062014_2.fastq.gz", "476_R1.fastq.gz", "486_R1.trimmed.fastq.gz", "home/hbeale/BS35112812_CACACA_L003_001.tar", "C021_0003_001409_BR_Whole_T3_TSMRU_A07217_R2_fastqc")
+readEndExtractionExpected=c(T, T, T, F, T, T, T, T, F, T)
+
+getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fastqc.zip", "\\.fastq", "\\.fq.gz", "\\.tgz", "\\.fastq.gz", "\\.tar", "_fastqc"), wordsAllowedAfterEndNumber=c("clean", "trimmed")){
+  #  extractEndsWithLowConfidencePattern=TRUE
+  # remove path info if any
+  
+  trimPunct= function (x) gsub("^[[:punct:]]+|[[:punct:]]+$", "", x)
+  #trimPunct (c("holly_", "holly__", "holly_2_KC23072_", "holly."))
+  df=data.frame(originalOrder=1:length(fileNames), inputName= fileNames , baseFileName=basename(fileNames))
+  
+  #  strip suffix
+  df$noSuffix= df$baseFileName
+  for (s in allowedSuffix) df$noSuffix =sub(paste0(s, "$"), "", df$noSuffix)
+  
+  # if relevant, strip words that are allowed after end indicator; strip outer punctuation
+  hasEndIndicatorAtStringEnd=grepl("[\\._][R]?[12]$", df $noSuffix) | grepl("[\\._][R]?[12](_[0-9]{3})$",  df $noSuffix)
+  
+  df$allowedWordsRemoved= df $noSuffix
+  for (w in wordsAllowedAfterEndNumber) df$allowedWordsRemoved[!hasEndIndicatorAtStringEnd] =sub(w, "", df$allowedWordsRemoved[!hasEndIndicatorAtStringEnd])
+  df$allowedWordsRemoved= trimPunct(df$allowedWordsRemoved)
+  
+  # extract read end ids
+  df$readPairID=sub("[\\._][R]?[12]$", "", df$allowedWordsRemoved)
+  df$rawReadEnd =sub("^.*[\\._][R]?([12])$", "\\1", df$allowedWordsRemoved)
+  
+  remainingToParse= df$readPairID == df$allowedWordsRemoved
+  
+  df$readPairID[remainingToParse ]=sub("[\\._][R]?[12](_[0-9]{3})$", "\\1",  df$allowedWordsRemoved)[remainingToParse]
+  df$rawReadEnd[remainingToParse]=sub("^.*[\\._][R]?([12])_[0-9]{3}$", "\\1", df$allowedWordsRemoved[remainingToParse])
+  
+  df$readEnd= df$rawReadEnd
+  df$readEnd[! df$rawReadEnd %in% 1:2]=NA
+  
+  # check for remaining read end identifiers
+  df$candidateEndIndentifierRemainsInReadPairID=grepl("[\\._][R]?[12]$", df$readPairID) |grepl("[\\._][R]?[12][\\._]", df$readPairID)
+  
+  return(df)
+  
+}
+
+
 options(stringsAsFactors=FALSE)
 #sets working directory
 setwd('Desktop/fastQC_treehouse_results')
@@ -157,7 +243,7 @@ name_of_txt = c("Adapter_Content.txt","Basic_Statistics.txt","Kmer_Content.txt",
                 "Per_sequence_GC_content.txt","Per_sequence_quality_scores.txt","Per_tile_sequence_quality.txt",
                 "Sequence_Duplication_Levels.txt", "Sequence_Length_Distribution.txt" )
 Name_of_files=list.files()
-Name_of_files=Name_of_files[Name_of_files != "Graph.R"]
+Name_of_files=Name_of_files[Name_of_files != "Test.R"]
 data=list()
 # Makes a data list that is composed of dataframes names after their folder and contains the datatxt.
 for (File in Directories){
@@ -181,9 +267,10 @@ for (File in Directories){
 }
 name_of_txt=append(name_of_txt, "Total Duplicate Percentage")
 #Name of of pdf file where all graphs will be saved
-#pdf(file = "/Users/Ilian/Desktop/fastQC_treehouse_results", title="Graphs of Merged Data")
+#pdf(file = "/Users/Ilian/Desktop/fastQC_treehouse_results/Merged.pdf", title="Graphs of Merged Data")
 #ggplot Per_sequence_quality_scores
 PSQS_Merged=NULL
+i=1
 for (Name in Name_of_files){
   PSQS=data [[paste('./',Name,sep='')]][['Per_sequence_quality_scores.txt']]
   PSQS$Name <- Name
@@ -200,7 +287,7 @@ Bad_samples$Upper <- Upper$value
 Bad_samples=data.frame(Bad_samples)
 colnames(Bad_samples)<-c("Quality","Count","Name","Lower","Upper")
 
-Bad_Data=Verifying_Intervals (Bad_samples)
+Bad_Data=Verifying_Intervals(Bad_samples)
 
 
 PSQS_PLOT_Conf_Int <- ggplot(Bad_Data, aes(x = Quality, y = Count,group=Name))
@@ -232,13 +319,38 @@ PBSC_Subset=PBSC_Sub
 PBSC_Subset$Base=ifelse(PBSC_Sub$G_C<1 & PBSC_Sub$A_T<1 , PBSC_Sub$Base, NA )
 PBSC_Subset=data.frame(PBSC_Subset)
 
-
+PBSC_DIV=Splitting_data(PBSC_Subset,Name_of_files)
 Good_data=Finding_Continuous_Line(PBSC_Subset,Name_of_files)
+Good_data_DIV=Splitting_data(Good_data,Name_of_files)
 
+for (i in length(PBSC_DIV)){
+  PBSC_Subset_Plot<-ggplot(PBSC_DIV[[i]],aes(x=Base,y=Name)) 
+  PBSC_Subset_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+    ggtitle("Per Base Sequence Content Complete")
+}
+for (i in length(Good_data_DIV)){
+  Good_data_Plot<-ggplot(Good_data_DIV[[i]],aes(x=Base,y=Name)) 
+  Good_data_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+    ggtitle("Per Base Sequence Content Longest Lines")
+}
 
 PBSC_Subset_Plot<-ggplot(PBSC_Subset,aes(x=Base,y=Name)) 
 PBSC_Subset_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
   ggtitle("Per Base Sequence Content")
+
+# Basic Statistics
+Basic_Stat_Merged=NULL
+BasicS=NULL
+i=1
+for (Name in Name_of_files){
+  Basic_Stat=data [[paste('./',Name,sep='')]][['Basic_Statistics.txt']]
+  BasicS$Total_Sequences=Basic_Stat[[2]][4]
+  BasicS$Name <- Name
+  Basic_Stat_Merged <- rbind(Basic_Stat_Merged,BasicS)
+}
+len=nrow(Basic_Stat_Merged)
+row.names(Basic_Stat_Merged)<-c(1:len)
+
 
 #Per Sequence GC Content
 PSGCC_Merged=NULL
@@ -249,5 +361,5 @@ for (Name in Name_of_files){
 }
 PSGCC_Merged=rename(PSGCC_Merged, c("#GC Content"="GC_Content"))
 Bad_Data=Normality_Test(PSGCC_Merged,Name_of_files,npar=TRUE)
-#dev.off()
 
+#dev.off()
