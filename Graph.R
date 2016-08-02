@@ -6,6 +6,7 @@ library(tcltk)
 library(asbio)
 library(nortest)
 library(data.table)
+#Comment :)
 #Calculates the Confidence Intervals
 Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE){
   colnames(Merge_File)<-c("point","value","Name")
