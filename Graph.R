@@ -1,12 +1,15 @@
-#libraries
+####################################################################################################################################################################
+# Creator: Ilian Torres
+# Date: August 3,3016
+# Works for Version 0.11.5 
+####################################################################################################################################################################
+#Libraries
 library(plyr)
 library(ggplot2)
-library(xtable)
 library(tcltk)
 library(asbio)
 library(nortest)
-library(data.table)
-#Comment :)
+####################################################################################################################################################################
 #Calculates the Confidence Intervals
 Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE){
   colnames(Merge_File)<-c("point","value","Name")
@@ -51,7 +54,7 @@ Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE
   #Bad_data$value <- as.numeric(Bad_data$value)
   return(Data)
 }
-
+####################################################################################################################################################################
 # Checking if its higher that 35
 Verifying_Intervals <- function(Bad_samples,npar=TRUE){
   colnames(Bad_samples)<-c("Quality","Count","Name","Lower","Upper")
@@ -80,7 +83,7 @@ Verifying_Intervals <- function(Bad_samples,npar=TRUE){
   }
   return(Bad_samples)
 }
-
+####################################################################################################################################################################
 #Finding continuous lines and verifiying they are straigh in y axis
 Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
   colnames(PBSC_Subset)<-c("Base","G","A","T","C","Name","G_C","A_T","GC_bot")
@@ -133,6 +136,7 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
   }
   return(Longest_Lines)
 }
+####################################################################################################################################################################
 # Spliting into 50 per set
 Splitting_data <- function (Good_data,Name_of_files,npar=TRUE){
   len = length(Name_of_files)
@@ -168,6 +172,7 @@ Splitting_data <- function (Good_data,Name_of_files,npar=TRUE){
   Datalist[[t]]=Data_sep_50
   return(Datalist)
 }
+####################################################################################################################################################################
 #Normality test for Per Sequence GC Content
 Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
   colnames(Merge_File)<-c("point","value","Name")
@@ -188,11 +193,16 @@ Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
 }
 
 
-
-# function to extract read pair id from fastq file name or tar or fastqc result
-
-miserableTestData=c("140618_I1069_FCC4MWGACXX_L4_LSCRHmM121ACAAAPEI-3_1.clean_fastqc", "AH07020812_ACACGA_L002_R1_002.fastq", "E021_0001_20140916_tumor_RNASeq_R1.clean.tar","C021_0001_20140916_tumor_RNASeq.tar", "LS3_GGCTAC_L002_R2_002.fq.gz", "AM163062014_2.fastq.gz", "476_R1.fastq.gz", "486_R1.trimmed.fastq.gz", "home/hbeale/BS35112812_CACACA_L003_001.tar", "C021_0003_001409_BR_Whole_T3_TSMRU_A07217_R2_fastqc")
-readEndExtractionExpected=c(T, T, T, F, T, T, T, T, F, T)
+####################################################################################################################################################################
+# Function getReadPairIDFromFq takes as input the name of the file and creates and returns his ID.
+# Function Created by Holly Beale
+# rules
+# it's ok to have the read end indicator at the end of the name, e.g. holly_2.fq
+# if it's not at the end, it can't be followed by a letter or number, and it can only be 
+# e.g. holly_2a.fq  <- 2 is not considered the read end indicator
+# e.g. holly_2_clean.fq  <- 2 is considered the read end indicator only if "clean" is in wordsAllowedAfterEndNumber
+# e.g. holly_2_KC23072.fq  <- 2 is considered the read end indicator only if "KC23072" is in wordsAllowedAfterEndNumber
+# this should fail, but doesn't:  holly_2_KC23072_2_clean"
 
 getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fastqc.zip", "\\.fastq", "\\.fq.gz", "\\.tgz", "\\.fastq.gz", "\\.tar", "_fastqc"), wordsAllowedAfterEndNumber=c("clean", "trimmed")){
   #  extractEndsWithLowConfidencePattern=TRUE
@@ -231,7 +241,7 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
   return(df)
   
 }
-
+####################################################################################################################################################################
 
 options(stringsAsFactors=FALSE)
 #sets working directory
@@ -283,20 +293,22 @@ Conf_Int_Table=Calculate_Confidence_Intervals_of_Table(PSQS_Merged,Quality_value
 Lower=Conf_Int_Table[[2]]
 Upper=Conf_Int_Table[[3]]
 Bad_samples=Conf_Int_Table[[4]]
-Bad_samples$Lower <- Lower$value
-Bad_samples$Upper <- Upper$value
+Bad_samples$Upper = sapply(Bad_samples$point, function(x){print(Upper[Upper$point==x[1], "value"])})
+Bad_samples$Lower = sapply(Bad_samples$point, function(x){print(Lower[Lower$point==x[1], "value"])})
 Bad_samples=data.frame(Bad_samples)
 colnames(Bad_samples)<-c("Quality","Count","Name","Lower","Upper")
 
 Bad_Data=Verifying_Intervals(Bad_samples)
+Good_data_DIV=Splitting_data(Bad_Data,Names)
+lol=Good_data_DIV[[1]]
+lol=data.frame(lol)
 
+PSQS_PLOT_Conf_Int <- ggplot(lol, aes(x = Quality, y = Count,group=Name))
+PSQS_PLOT_Conf_Int + geom_line(aes(color =Name))+ggtitle("Per Sequence Quality Scores 95% Confidence Intervals Excluding Upper Outliers Above Quality 35")+guides(color=FALSE)+
+  geom_ribbon(aes(ymin=Lower,ymax=Upper,x=Quality, group=Name), alpha=0.01, linetype=1,colour="grey60", size=.05,fill="grey40")
 
-PSQS_PLOT_Conf_Int <- ggplot(Bad_Data, aes(x = Quality, y = Count,group=Name))
-PSQS_PLOT_Conf_Int + geom_line(aes(color =Name))+ggtitle("Per Sequence Quality Scores 95% Confidence Intervals Excluding Upper Outliers Above Quality 35")+
-  geom_ribbon(aes(ymin=Lower,ymax=Upper), alpha=0.01, linetype=1,colour="grey60", size=.05,fill="grey40")
-
-PSQS_PLOT_Conf_Int_IND <- ggplot(Bad_Data, aes(x = Quality, y = Count)) 
-PSQS_PLOT_Conf_Int_IND + geom_line(aes(color =Name)) +facet_wrap(~Name) + geom_ribbon(aes(ymin=Lower,ymax=Upper), alpha=0.1, linetype=1,colour="grey20", size=.05,fill="grey20")
+PSQS_PLOT_Conf_Int_IND <- ggplot(lol, aes(x = Quality, y = Count)) 
+PSQS_PLOT_Conf_Int_IND + geom_line(aes(color =Name)) +facet_wrap(~Name) + geom_ribbon(aes(ymin=Lower,ymax=Upper), alpha=0.1, linetype=1,colour="grey20", size=.05,fill="grey20")+guides(color=FALSE)
 
 #ggplot per base sequence content plot
 PBSC_Merged=NULL
