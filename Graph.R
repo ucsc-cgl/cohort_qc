@@ -282,7 +282,7 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
 args <- commandArgs(TRUE)
 firstInputArg=args[[1]]
 #sets working directory
-setwd(args)
+setwd(firstInputArg)
 #variables
 Directories=list.dirs(recursive = FALSE)
 Name_of_folder='Sep_fastqc_data'
@@ -317,7 +317,7 @@ for (File in Directories){
 name_of_txt=append(name_of_txt, "Total Duplicate Percentage")
 ####################################################################################################################################################################
 #Name of of pdf file where all graphs will be saved
-pdf(file = paste(firstInputArg,"Merged.pdf",sep="/"), title="Graphs of Merged Data",height = 13,width = 15)
+pdf(file = paste(firstInputArg,"/Merged.pdf",sep=''), title="Graphs of Merged Data",height = 13,width = 15)
 #ggplot Per_sequence_quality_scores
 PSQS_Merged=NULL
 gg_plot1=NULL
@@ -355,7 +355,7 @@ for (i in 1:(length(Bad_data_DIV))){
   gg_plot1[[i]]=PSQS_PLOT_Conf_Int
   gg_plot2[[i]]=PSQS_PLOT_Conf_Int_IND
 }
-for (i in 1:(length(gg_plot))){
+for (i in 1:(length(gg_plot1))){
   print  (gg_plot1[[i]])
   print (gg_plot2[[i]])
 }
