@@ -355,7 +355,6 @@ for (i in 1:(length(gg_plot))){
   print (gg_plot2[[i]])
 }
 
-dev.off()
 ####################################################################################################################################################################
 #ggplot per base sequence content plot
 PBSC_Merged=NULL
@@ -433,58 +432,18 @@ for ( i in list_of_Ids){
   Basic_Stat_Subset=subset(Basic_Stat_Merged,Basic_Stat_Merged$ID==i)
   Test=length(unique(Basic_Stat_Subset$Total_Sequences))
   if (Test == 1){
-    Basic_Stat_Subset$Verification=1
+    Basic_Stat_Subset$Legend="Equal Total Sequences"
   }
   else{
-    Basic_Stat_Subset$Verification=0
+    Basic_Stat_Subset$Legend="Unequal Total Sequences"
   }
   Basic_Stat_Subset$Total_Sequences <- as.numeric(Basic_Stat_Subset$Total_Sequences)
   Data=rbind(Data,Basic_Stat_Subset)
 }
 
 PBSC_Subset_Plot<-ggplot(Data,aes(x=ID,y=Total_Sequences)) 
-PBSC_Subset_Plot + geom_point(aes(color = Verification),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
-  ggtitle("Per Base Sequence Content")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
-####################################################################################################################################################################
-# Basic Statistics
-Basic_Stat_Merged=NULL
-BasicS=NULL
-list_of_Ids=NULL
-i=1
-for (Name in Name_of_files){
-  Basic_Stat=data [[paste('./',Name,sep='')]][['Basic_Statistics.txt']]
-  BasicS$Total_Sequences=Basic_Stat[[2]][4]
-  BasicS$Name <- Name
-  Basic_Stat_Merged <- rbind(Basic_Stat_Merged,BasicS)
-}
-len=nrow(Basic_Stat_Merged)
-row.names(Basic_Stat_Merged)<-c(1:len)
-Basic_Stat_Merged=data.frame(Basic_Stat_Merged)
-
-for ( i in (1:len)){
-  name=Basic_Stat_Merged$Name[[i]]
-  info=getReadPairIDFromFq(name)
-  list_of_Ids[i]=info$readPairID
-  Basic_Stat_Merged$ID[i]=info$readPairID
-}
-list_of_Ids=unique(list_of_Ids)
-Data=NULL
-for ( i in list_of_Ids){
-  Basic_Stat_Subset=subset(Basic_Stat_Merged,Basic_Stat_Merged$ID==i)
-  Test=length(unique(Basic_Stat_Subset$Total_Sequences))
-  if (Test == 1){
-    Basic_Stat_Subset$Verification=1
-  }
-  else{
-    Basic_Stat_Subset$Verification=0
-  }
-  Basic_Stat_Subset$Total_Sequences <- as.numeric(Basic_Stat_Subset$Total_Sequences)
-  Data=rbind(Data,Basic_Stat_Subset)
-}
-
-PBSC_Subset_Plot<-ggplot(Data,aes(x=ID,y=Total_Sequences)) 
-PBSC_Subset_Plot + geom_point(aes(color = Verification),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
-  ggtitle("Per Base Sequence Content")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+PBSC_Subset_Plot + geom_point(aes(colour = Legend),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+  ggtitle("Sequence Count within Pair")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ####################################################################################################################################################################
 #Per Sequence GC Content
 PSGCC_Merged=NULL
