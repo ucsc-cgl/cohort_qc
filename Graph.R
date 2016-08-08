@@ -65,6 +65,7 @@ Calculate_Confidence_Intervals_of_Table <- function(Merge_File,x_value,npar=TRUE
   Data=list(Median_table,Lower_table,Upper_table,Bad_data)
   return(Data)
 }
+
 ####################################################################################################################################################################
 # Verifying_Intervals takes the data given by Calculate_Confidence_Intervals_of_Table and eliminates
 # all the data from Quality 35-40 that are above the confindence interval but that Quality 2-34 lies under the upper confidence interval.
@@ -103,9 +104,9 @@ Verifying_Intervals <- function(Bad_samples,npar=TRUE){
 }
 ####################################################################################################################################################################
 # Finding_Continuous_Line takes as input the name of all the files and data that is composed of
-#"Base","G","A","T","C","Name","G_C","A_T","GC_bot". The purpose of this function is to find when AT and GC have the lonegest continous line.
+#"Base","G","A","T","C","Name","G_C","A_T","Legend". The purpose of this function is to find when AT and GC have the lonegest continous line.
 Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
-  colnames(PBSC_Subset)<-c("Base","G","A","T","C","Name","G_C","A_T","GC_bot")
+  colnames(PBSC_Subset)<-c("Base","G","A","T","C","Name","G_C","A_T","Legend")
   Longest_Lines=NULL
   # For loop that takes each name of the batch and subsets the data by name of file. TF_List finds where the base is 
   # NA and displays true where it is NA and false whenit is a value. Then Index_Trues takes the index of where TF_List is true.
@@ -163,6 +164,11 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
       Longest_Lines=rbind(Longest_Lines,NA_Data)
     }
   }
+  Longest_Lines$Base <- as.numeric(Longest_Lines$Base)
+  Longest_Lines$A <- as.numeric(Longest_Lines$A)
+  Longest_Lines$T <- as.numeric(Longest_Lines$T)
+  Longest_Lines$G <- as.numeric(Longest_Lines$G)
+  Longest_Lines$C <- as.numeric(Longest_Lines$C)
   return(Longest_Lines)
 }
 ####################################################################################################################################################################
@@ -270,11 +276,6 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
 ####################################################################################################################################################################
 # Start of Program #################################################################################################################################################
 ####################################################################################################################################################################
-#Input
-args <- commandArgs(TRUE)
-firstInputArg=args[[1]]
-print(paste0(rev(strsplit(firstInputArg, "")[[1]]), collapse=""))
-options(stringsAsFactors=FALSE)
 #sets working directory
 setwd('Desktop/fastQC_treehouse_results')
 #variables
@@ -311,9 +312,11 @@ for (File in Directories){
 name_of_txt=append(name_of_txt, "Total Duplicate Percentage")
 ####################################################################################################################################################################
 #Name of of pdf file where all graphs will be saved
-#pdf(file = "/Users/Ilian/Desktop/fastQC_treehouse_results/Merged.pdf", title="Graphs of Merged Data")
+pdf(file = "/Users/Ilian/Desktop/fastQC_treehouse_results/Merged.pdf", title="Graphs of Merged Data",height = 13,width = 15)
 #ggplot Per_sequence_quality_scores
 PSQS_Merged=NULL
+gg_plot1=NULL
+gg_plot2=NULL
 # For loop that imports all the Data of Per_sequence_quality_scores
 for (Name in Name_of_files){
   PSQS=data [[paste('./',Name,sep='')]][['Per_sequence_quality_scores.txt']]
@@ -336,21 +339,29 @@ Bad_Data=Verifying_Intervals(Bad_samples)
 Bad_Data_Names=unique(Bad_Data$Name)
 Bad_data_DIV=Splitting_data(Bad_Data,Bad_Data_Names,30)
 
-lol=Bad_data_DIV[[1]]
 
-lol=data.frame(lol)
+for (i in 1:(length(Bad_data_DIV))){
+  Graph=Bad_data_DIV[[i]]
+  PSQS_PLOT_Conf_Int <- ggplot(Graph, aes(x = Quality, y = Count,group=Name))+
+    geom_line(aes(color =Name))+ggtitle("Per Sequence Quality Scores 95% Confidence Intervals Excluding Upper Outliers Above Quality 35")+
+    geom_ribbon(aes(ymin=Lower,ymax=Upper,x=Quality, group=Name), alpha=0.01, linetype=1,colour="grey60", size=.05,fill="grey40")
+  PSQS_PLOT_Conf_Int_IND = ggplot(Graph, aes(x = Quality, y = Count)) +
+    geom_line(aes(color =Name)) +facet_wrap(~Name) + geom_ribbon(aes(ymin=Lower,ymax=Upper), alpha=0.1, linetype=1,colour="grey20", size=.05,fill="grey20")+guides(color=FALSE)
+  gg_plot1[[i]]=PSQS_PLOT_Conf_Int
+  gg_plot2[[i]]=PSQS_PLOT_Conf_Int_IND
+}
+for (i in 1:(length(gg_plot))){
+  print  (gg_plot1[[i]])
+  print (gg_plot2[[i]])
+}
 
-PSQS_PLOT_Conf_Int <- ggplot(lol, aes(x = Quality, y = Count,group=Name))
-PSQS_PLOT_Conf_Int + geom_line(aes(color =Name))+ggtitle("Per Sequence Quality Scores 95% Confidence Intervals Excluding Upper Outliers Above Quality 35")+
-  geom_ribbon(aes(ymin=Lower,ymax=Upper,x=Quality, group=Name), alpha=0.01, linetype=1,colour="grey60", size=.05,fill="grey40")
-
-PSQS_PLOT_Conf_Int_IND <- ggplot(lol, aes(x = Quality, y = Count)) 
-PSQS_PLOT_Conf_Int_IND + geom_line(aes(color =Name)) +facet_wrap(~Name) + geom_ribbon(aes(ymin=Lower,ymax=Upper), alpha=0.1, linetype=1,colour="grey20", size=.05,fill="grey20")+guides(color=FALSE)
+dev.off()
 ####################################################################################################################################################################
 #ggplot per base sequence content plot
 PBSC_Merged=NULL
 PBSC_Sub=NULL
 PBSC_Subset=NULL
+g_plot=NULL
 for (Name in Name_of_files){
   PBSC=data [[paste('./',Name,sep='')]][['Per_base_sequence_content.txt']]
   PBSC$Name <- Name
@@ -361,32 +372,79 @@ PBSC_Merged=data.frame(PBSC_Merged)
 PBSC_Sub=PBSC_Merged
 PBSC_Sub$G_C= (abs(PBSC_Merged$G-PBSC_Merged$C))
 PBSC_Sub$A_T= (abs(PBSC_Merged$A-PBSC_Merged$T))
-PBSC_Sub$GC_bot = ifelse(PBSC_Merged$C<PBSC_Merged$T | PBSC_Merged$C<PBSC_Merged$A
-                         | PBSC_Merged$G<PBSC_Merged$T | PBSC_Merged$G<PBSC_Merged$A,1,0)
+PBSC_Sub$Legend = ifelse(PBSC_Merged$C<PBSC_Merged$T | PBSC_Merged$C<PBSC_Merged$A
+                         | PBSC_Merged$G<PBSC_Merged$T | PBSC_Merged$G<PBSC_Merged$A,"AT Greater than GC","GC Greater than AT")
 PBSC_Sub=data.frame(PBSC_Sub)
 
 PBSC_Subset=PBSC_Sub
 PBSC_Subset$Base=ifelse(PBSC_Sub$G_C<1 & PBSC_Sub$A_T<1 , PBSC_Sub$Base, NA )
 PBSC_Subset=data.frame(PBSC_Subset)
 
-PBSC_DIV=Splitting_data(PBSC_Subset,Name_of_files)
+PBSC_DIV=Splitting_data(PBSC_Subset,Name_of_files,50)
 Good_data=Finding_Continuous_Line(PBSC_Subset,Name_of_files)
 Good_data_DIV=Splitting_data(Good_data,Name_of_files,50)
-
-for (i in length(PBSC_DIV)){
-  PBSC_Subset_Plot<-ggplot(PBSC_DIV[[i]],aes(x=Base,y=Name)) 
-  PBSC_Subset_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+for (i in 1:(length(PBSC_DIV))){
+  Graph=PBSC_DIV[[i]]
+  PBSC_Subset_Plot<-ggplot(Graph,aes(x=Base,y=Name)) +
+    geom_point(aes(colour = Legend),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
     ggtitle("Per Base Sequence Content Complete")
-}
-for (i in length(Good_data_DIV)){
-  Good_data_Plot<-ggplot(Good_data_DIV[[i]],aes(x=Base,y=Name)) 
-  Good_data_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
-    ggtitle("Per Base Sequence Content Longest Lines")
+  g_plot[[i]]=PBSC_Subset_Plot
 }
 
-PBSC_Subset_Plot<-ggplot(PBSC_Subset,aes(x=Base,y=Name)) 
-PBSC_Subset_Plot + geom_point(aes(color = GC_bot),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
-  ggtitle("Per Base Sequence Content")
+for (i in 1:(length(g_plot))){
+  print  (g_plot[[i]])
+}
+g_plot=NULL
+for (i in 1:(length(Good_data_DIV))){
+  Graph=Good_data_DIV[[i]]
+  Good_data_Plot=ggplot(Graph,aes(x=Base,y=Name)) +
+    geom_point(aes(colour = Legend),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+    ggtitle("Per Base Sequence Content Longest Lines")
+  g_plot[[i]]=Good_data_Plot
+}
+for (i in 1:(length(g_plot))){
+  print  (g_plot[[i]])
+}
+
+####################################################################################################################################################################
+# Basic Statistics
+Basic_Stat_Merged=NULL
+BasicS=NULL
+list_of_Ids=NULL
+for (Name in Name_of_files){
+  Basic_Stat=data [[paste('./',Name,sep='')]][['Basic_Statistics.txt']]
+  BasicS$Total_Sequences=Basic_Stat[[2]][4]
+  BasicS$Name <- Name
+  Basic_Stat_Merged <- rbind(Basic_Stat_Merged,BasicS)
+}
+len=nrow(Basic_Stat_Merged)
+row.names(Basic_Stat_Merged)<-c(1:len)
+Basic_Stat_Merged=data.frame(Basic_Stat_Merged)
+
+for ( i in (1:len)){
+  name=Basic_Stat_Merged$Name[[i]]
+  info=getReadPairIDFromFq(name)
+  list_of_Ids[i]=info$readPairID
+  Basic_Stat_Merged$ID[i]=info$readPairID
+}
+list_of_Ids=unique(list_of_Ids)
+Data=NULL
+for ( i in list_of_Ids){
+  Basic_Stat_Subset=subset(Basic_Stat_Merged,Basic_Stat_Merged$ID==i)
+  Test=length(unique(Basic_Stat_Subset$Total_Sequences))
+  if (Test == 1){
+    Basic_Stat_Subset$Verification=1
+  }
+  else{
+    Basic_Stat_Subset$Verification=0
+  }
+  Basic_Stat_Subset$Total_Sequences <- as.numeric(Basic_Stat_Subset$Total_Sequences)
+  Data=rbind(Data,Basic_Stat_Subset)
+}
+
+PBSC_Subset_Plot<-ggplot(Data,aes(x=ID,y=Total_Sequences)) 
+PBSC_Subset_Plot + geom_point(aes(color = Verification),alpha = 0.5,size = 1.5,position = position_jitter(width = 0.25, height = 0))+
+  ggtitle("Per Base Sequence Content")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ####################################################################################################################################################################
 # Basic Statistics
 Basic_Stat_Merged=NULL
