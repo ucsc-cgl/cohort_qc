@@ -10,6 +10,7 @@ library(tcltk)
 library(asbio)
 library(nortest)
 library(tidyr)
+library(gridExtra)
 ####################################################################################################################################################################
 #   Functions   ####################################################################################################################################################
 ####################################################################################################################################################################
@@ -215,12 +216,14 @@ Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
   for (x in Name_of_files){
     Data_Subset=subset(Merge_File,Merge_File$Name==x)
     Data=Data_Subset$value
-    Shapiro=ad.test(Data)
-    Shapiro=Shapiro$p.value
-    if (Shapiro<.05){
-      Bad_data=rbind(Bad_data,Data_Subset)
+    Shapiro_t=shapiro.test(Data)
+    Shapiro_t=Shapiro_t[[2]]
+    Anderson_Darling_t=ad.test(Data)
+    Anderson_Darling_t=Anderson_Darling_t[[2]]
+    Data_Subset$Shapiro<-Shapiro_t
+    Data_Subset$AndersonDT<-Anderson_Darling_t
+    Bad_data=rbind(Bad_data,Data_Subset)
     }
-  }
   return(Bad_data)
 }
 
@@ -276,8 +279,10 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
 ####################################################################################################################################################################
 # Start of Program #################################################################################################################################################
 ####################################################################################################################################################################
+args <- commandArgs(TRUE)
+firstInputArg=args[[1]]
 #sets working directory
-setwd('Desktop/fastQC_treehouse_results')
+setwd(args)
 #variables
 Directories=list.dirs(recursive = FALSE)
 Name_of_folder='Sep_fastqc_data'
@@ -312,7 +317,7 @@ for (File in Directories){
 name_of_txt=append(name_of_txt, "Total Duplicate Percentage")
 ####################################################################################################################################################################
 #Name of of pdf file where all graphs will be saved
-pdf(file = "/Users/Ilian/Desktop/fastQC_treehouse_results/Merged.pdf", title="Graphs of Merged Data",height = 13,width = 15)
+pdf(file = paste(firstInputArg,"Merged.pdf",sep="/"), title="Graphs of Merged Data",height = 13,width = 15)
 #ggplot Per_sequence_quality_scores
 PSQS_Merged=NULL
 gg_plot1=NULL
@@ -447,6 +452,8 @@ PBSC_Subset_Plot + geom_point(aes(colour = Legend),alpha = 0.5,size = 1.5,positi
 ####################################################################################################################################################################
 #Per Sequence GC Content
 PSGCC_Merged=NULL
+Subset_Name=NULL
+g_plot=NULL
 for (Name in Name_of_files){
   PSGCC=data [[paste('./',Name,sep='')]][['Per_sequence_GC_content.txt']]
   PSGCC$Name <- Name
@@ -454,6 +461,18 @@ for (Name in Name_of_files){
 }
 PSGCC_Merged=rename(PSGCC_Merged, c("#GC Content"="GC_Content"))
 Bad_Data=Normality_Test(PSGCC_Merged,Name_of_files,npar=TRUE)
-
-#dev.off()
+for ( i in Name_of_files){
+  Subset_Name=subset(Bad_Data,Bad_Data$Name==i)
+  Shapiro=Subset_Name[[4]][[1]]
+  Anderson=Subset_Name[[5]][[1]]
+  Tests=rbind(Shapiro,Anderson)
+  mytable <- cbind(sites=c("Shapiro Test","Anderson Darling Test",Tests))
+  PSGCC_Subset_Plot<-ggplot(Subset_Name,aes(x=point,y=value))+
+   geom_line()+ggtitle("Per Sequence GC Content")+annotation_custom(tableGrob(mytable), xmin=35, xmax=50, ymin=10, ymax=15)
+  g_plot[[i]]=PSGCC_Subset_Plot
+}
+for (i in 1:(length(g_plot))){
+  print  (g_plot[[i]])
+}
+dev.off()
 ####################################################################################################################################################################
