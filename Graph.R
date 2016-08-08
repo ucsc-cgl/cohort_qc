@@ -223,7 +223,7 @@ Normality_Test <- function(Merge_File,Name_of_files,npar=TRUE){
     Data_Subset$Shapiro<-Shapiro_t
     Data_Subset$AndersonDT<-Anderson_Darling_t
     Bad_data=rbind(Bad_data,Data_Subset)
-    }
+  }
   return(Bad_data)
 }
 
@@ -280,9 +280,9 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
 # Start of Program #################################################################################################################################################
 ####################################################################################################################################################################
 args <- commandArgs(TRUE)
-firstInputArg=args[[1]]
+Directory=args[[1]]
 #sets working directory
-setwd(firstInputArg)
+setwd(Directory)
 #variables
 Directories=list.dirs(recursive = FALSE)
 Name_of_folder='Sep_fastqc_data'
@@ -291,7 +291,7 @@ name_of_txt = c("Adapter_Content.txt","Basic_Statistics.txt","Kmer_Content.txt",
                 "Per_sequence_GC_content.txt","Per_sequence_quality_scores.txt","Per_tile_sequence_quality.txt",
                 "Sequence_Duplication_Levels.txt", "Sequence_Length_Distribution.txt" )
 Name_of_files=list.files()
-Name_of_files=Name_of_files[Name_of_files != "Test.R"]
+Name_of_files=Name_of_files[Name_of_files != "Graph.R"]
 data=list()
 # Makes a data list that is composed of dataframes names after their folder and contains the datatxt.
 for (File in Directories){
@@ -317,7 +317,7 @@ for (File in Directories){
 name_of_txt=append(name_of_txt, "Total Duplicate Percentage")
 ####################################################################################################################################################################
 #Name of of pdf file where all graphs will be saved
-pdf(file = paste(firstInputArg,"/Merged.pdf",sep=''), title="Graphs of Merged Data",height = 13,width = 15)
+pdf(file = paste(Directory,"/Merged.pdf",sep=''), title="Graphs of Merged Data",height = 13,width = 15)
 #ggplot Per_sequence_quality_scores
 PSQS_Merged=NULL
 gg_plot1=NULL
@@ -417,7 +417,7 @@ BasicS=NULL
 list_of_Ids=NULL
 for (Name in Name_of_files){
   Basic_Stat=data [[paste('./',Name,sep='')]][['Basic_Statistics.txt']]
-  BasicS$Total_Sequences=Basic_Stat[[2]][4]
+  BasicS$Total_Sequences=as.numeric(as.character(Basic_Stat[[2]][4]))
   BasicS$Name <- Name
   Basic_Stat_Merged <- rbind(Basic_Stat_Merged,BasicS)
 }
@@ -468,7 +468,7 @@ for ( i in Name_of_files){
   Tests=rbind(Shapiro,Anderson)
   mytable <- cbind(sites=c("Shapiro Test","Anderson Darling Test",Tests))
   PSGCC_Subset_Plot<-ggplot(Subset_Name,aes(x=point,y=value))+
-   geom_line()+ggtitle("Per Sequence GC Content")+annotation_custom(tableGrob(mytable), xmin=35, xmax=50, ymin=10, ymax=15)
+    geom_line()+ggtitle("Per Sequence GC Content")+annotation_custom(tableGrob(mytable), xmin=35, xmax=50, ymin=10, ymax=15)+xlab("GC Content")+ylab("Count")
   g_plot[[i]]=PSGCC_Subset_Plot
 }
 for (i in 1:(length(g_plot))){
