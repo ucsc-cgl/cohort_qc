@@ -2,6 +2,8 @@
 # Creator: Ilian Torres
 # Date: August 3,3016
 # Works for Version 0.11.5 
+# Inputs for R script is the R script directory, the complete directory of the batch file and the number of samples per page.
+# Example Rscript --vanilla Graph.R /Users/Ilian/Desktop/test4 30
 ####################################################################################################################################################################
 #Libraries
 library(plyr)
@@ -145,8 +147,8 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
         MeanGC=mean(Verify_Mean$G)
         # Verify that the longest line falls between the mean+-2
         for (i in 1:nrow(Verify_Mean)){
-          if (MeanAT+2>=Verify_Mean$A[i] | MeanAT-2<=Verify_Mean$A[i] | MeanAT+2>=Verify_Mean$T[i] | MeanAT-2<=Verify_Mean$T[i] | 
-              MeanGC+2>=Verify_Mean$G[i] | MeanGC-2<=Verify_Mean$G[i] | MeanGC+2>=Verify_Mean$C[i] | MeanGC-2<=Verify_Mean$C[i]){
+          if (MeanAT+4>=Verify_Mean$A[i] | MeanAT-4<=Verify_Mean$A[i] | MeanAT+4>=Verify_Mean$T[i] | MeanAT-4<=Verify_Mean$T[i] | 
+              MeanGC+4>=Verify_Mean$G[i] | MeanGC-4<=Verify_Mean$G[i] | MeanGC+4>=Verify_Mean$C[i] | MeanGC-4<=Verify_Mean$C[i]){
             bool=TRUE
             break
           }
@@ -173,8 +175,10 @@ Finding_Continuous_Line<- function(PBSC_Subset,Name_of_files){
   return(Longest_Lines)
 }
 ####################################################################################################################################################################
-# Function that slits data for more understandible graphs. Input the data, name of the files that are in the data, and what number of data per graph(div).
-Splitting_data <- function (Good_data,Name_of_files,div,npar=TRUE){
+# Function that splits data for more understandible graphs by dividing them into div samples per graph.
+# Div being how much samples a user wants per graph. 
+# Input the data, name of the files that are in the data, and what number of data per graph(div).
+Splitting_data <- function (data,Name_of_files,div,npar=TRUE){
   len = length(Name_of_files)
   rest=len %% div
   value = len-rest
@@ -184,7 +188,7 @@ Splitting_data <- function (Good_data,Name_of_files,div,npar=TRUE){
   t=1
   for (i in (1:(t*div))){
     name=Name_of_files[i]
-    Data_subset=subset(Good_data,Good_data$Name==name)
+    Data_subset=subset(data,data$Name==name)
     Data_sep_div=rbind(Data_sep_div,Data_subset)
   }
   Datalist[[t]]=Data_sep_div
@@ -193,7 +197,7 @@ Splitting_data <- function (Good_data,Name_of_files,div,npar=TRUE){
   while(t!=value_div){
     for (i in ((t*div+1):(t*div+div))){
       name=Name_of_files[i]
-      Data_subset=subset(Good_data,Good_data$Name==name)
+      Data_subset=subset(data,data$Name==name)
       Data_sep_div=rbind(Data_sep_div,Data_subset)
     }
     Datalist[[t]]=Data_sep_div
@@ -202,7 +206,7 @@ Splitting_data <- function (Good_data,Name_of_files,div,npar=TRUE){
   }
   for (i in ((t*div+1):(t*div+rest))){
     name=Name_of_files[i]
-    Data_subset=subset(Good_data,Good_data$Name==name)
+    Data_subset=subset(data,data$Name==name)
     Data_sep_div=rbind(Data_sep_div,Data_subset)
   }
   Datalist[[t]]=Data_sep_div
@@ -281,6 +285,7 @@ getReadPairIDFromFq<-function(fileNames= miserableTestData, allowedSuffix=c("_fa
 ####################################################################################################################################################################
 args <- commandArgs(TRUE)
 Directory=args[[1]]
+Div=as.numeric(args[[2]])
 #sets working directory
 setwd(Directory)
 #variables
@@ -292,6 +297,7 @@ name_of_txt = c("Adapter_Content.txt","Basic_Statistics.txt","Kmer_Content.txt",
                 "Sequence_Duplication_Levels.txt", "Sequence_Length_Distribution.txt" )
 Name_of_files=list.files()
 Name_of_files=Name_of_files[Name_of_files != "Graph.R"]
+Name_of_files=Name_of_files[Name_of_files != "Merged.pdf"]
 data=list()
 # Makes a data list that is composed of dataframes names after their folder and contains the datatxt.
 for (File in Directories){
@@ -342,7 +348,8 @@ colnames(Bad_samples)<-c("Quality","Name","Count","Upper","Lower")
 
 Bad_Data=Verifying_Intervals(Bad_samples)
 Bad_Data_Names=unique(Bad_Data$Name)
-Bad_data_DIV=Splitting_data(Bad_Data,Bad_Data_Names,30)
+
+Bad_data_DIV=Splitting_data(Bad_Data,Bad_Data_Names,Div)
 
 
 for (i in 1:(length(Bad_data_DIV))){
@@ -381,12 +388,12 @@ PBSC_Sub$Legend = ifelse(PBSC_Merged$C<PBSC_Merged$T | PBSC_Merged$C<PBSC_Merged
 PBSC_Sub=data.frame(PBSC_Sub)
 
 PBSC_Subset=PBSC_Sub
-PBSC_Subset$Base=ifelse(PBSC_Sub$G_C<1 & PBSC_Sub$A_T<1 , PBSC_Sub$Base, NA )
+PBSC_Subset$Base=ifelse(PBSC_Sub$G_C<3 & PBSC_Sub$A_T<3 , PBSC_Sub$Base, NA )
 PBSC_Subset=data.frame(PBSC_Subset)
 
-PBSC_DIV=Splitting_data(PBSC_Subset,Name_of_files,50)
+PBSC_DIV=Splitting_data(PBSC_Subset,Name_of_files,Div)
 Good_data=Finding_Continuous_Line(PBSC_Subset,Name_of_files)
-Good_data_DIV=Splitting_data(Good_data,Name_of_files,50)
+Good_data_DIV=Splitting_data(Good_data,Name_of_files,Div)
 for (i in 1:(length(PBSC_DIV))){
   Graph=PBSC_DIV[[i]]
   PBSC_Subset_Plot<-ggplot(Graph,aes(x=Base,y=Name)) +
@@ -409,6 +416,8 @@ for (i in 1:(length(Good_data_DIV))){
 for (i in 1:(length(g_plot))){
   print  (g_plot[[i]])
 }
+
+
 
 ####################################################################################################################################################################
 # Basic Statistics
