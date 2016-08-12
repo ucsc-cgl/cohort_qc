@@ -193,7 +193,6 @@ Splitting_data <- function (data,Name_of_files,div,npar=TRUE){
   }
   Datalist[[t]]=Data_sep_div
   Data_sep_div=NULL
-  t=t+1
   while(t!=value_div){
     for (i in ((t*div+1):(t*div+div))){
       name=Name_of_files[i]
